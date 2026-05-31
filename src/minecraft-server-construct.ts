@@ -115,12 +115,21 @@ export class MinecraftServer extends Construct {
       }),
     );
 
+    const instanceType =
+      props.instanceType ?? new ec2.InstanceType(profile.instanceType);
+    if (instanceType.architecture !== ec2.InstanceArchitecture.ARM_64) {
+      throw new Error(
+        `MinecraftServer requires an ARM64 instance type to match the ARM64 AMI; received ${instanceType.toString()}`,
+      );
+    }
+
     this.instance = new ec2.Instance(this, "MinecraftInstance", {
       vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
-      instanceType:
-        props.instanceType ?? new ec2.InstanceType(profile.instanceType),
-      machineImage: ec2.MachineImage.latestAmazonLinux2023(),
+      instanceType,
+      machineImage: ec2.MachineImage.latestAmazonLinux2023({
+        cpuType: ec2.AmazonLinuxCpuType.ARM_64,
+      }),
       role: this.role,
       securityGroup: this.securityGroup,
       associatePublicIpAddress: true,
@@ -195,13 +204,13 @@ function deploymentProfile(isProd: boolean): {
 } {
   return isProd
     ? {
-        instanceType: "c7i.8xlarge",
+        instanceType: "c7g.8xlarge",
         memoryMin: "16G",
         memoryMax: "32G",
         volumeSizeGiB: 150,
       }
     : {
-        instanceType: "t3.small",
+        instanceType: "t4g.small",
         memoryMin: "512M",
         memoryMax: "1G",
         volumeSizeGiB: 20,
