@@ -66,10 +66,13 @@ MINECRAFT_VERSION=${shellQuote(props.minecraftVersion)}
 PAPER_BUILD=${shellQuote(props.paperBuild)}
 PAPER_DOWNLOAD_URL=${shellQuote(props.paperDownloadUrl ?? "")}
 PAPER_USER_AGENT=${shellQuote("buildercraft-cdk/1.0")}
+JAVA_HOME="/usr/lib/jvm/java-25-amazon-corretto.$(uname -m)"
+JAVA_BIN="$JAVA_HOME/bin/java"
 
 log "Installing operating system packages"
 dnf update -y
-dnf install -y java-21-amazon-corretto-headless jq
+dnf install -y java-25-amazon-corretto-headless jq
+"$JAVA_BIN" -version
 
 log "Creating minecraft service user and directories"
 if ! id minecraft >/dev/null 2>&1; then
@@ -119,7 +122,8 @@ After=network-online.target
 User=minecraft
 Group=minecraft
 WorkingDirectory=$SERVER_DIR
-ExecStart=/usr/bin/java -Xms${memoryMin} -Xmx${memoryMax} -jar paper.jar nogui
+Environment=JAVA_HOME=$JAVA_HOME
+ExecStart=$JAVA_BIN -Xms${memoryMin} -Xmx${memoryMax} -jar paper.jar nogui
 Restart=on-failure
 RestartSec=10
 SuccessExitStatus=0 143

@@ -17,8 +17,8 @@
     ]
   },
   "context": {
-    "minecraftVersion": "1.21.4",
-    "paperBuild": "232",
+    "minecraftVersion": "26.1.2",
+    "paperBuild": "66",
     "instanceType": "c7i.8xlarge",
     "volumeSizeGiB": 150,
     "memoryMin": "16G",
