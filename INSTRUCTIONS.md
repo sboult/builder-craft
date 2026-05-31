@@ -34,7 +34,7 @@ This project is set up so `npx cdk deploy` should work after local AWS prerequis
 
 6. Confirm EC2 capacity and quotas.
 
-   The default test instance is `t3.small`. When `isProd` is `true`, the production default is `c7i.8xlarge`; make sure the selected region supports that instance type and that the account has enough EC2 quota.
+   The default test instance is `t4g.small`. When `isProd` is `true`, the production default is `c7g.8xlarge`; make sure the selected region supports that instance type and that the account has enough EC2 quota.
 
 ## Local Config
 
@@ -51,7 +51,8 @@ Deployment defaults live in `cdk.json` under `context`:
   "motd": "BuilderCraft",
   "difficulty": "normal",
   "gamemode": "survival",
-  "ops": []
+  "ops": [],
+  "plugins": []
 }
 ```
 
@@ -72,6 +73,48 @@ Optional override:
 
 For DNS, set `domainName` and exactly one of `hostedZoneDomainName` or `hostedZoneId`.
 Use `paperDownloadUrl` when you want to bypass the PaperMC build lookup and pin the exact jar URL.
+
+## Plugins
+
+Set `plugins` in `cdk.json` to install Paper plugins during EC2 bootstrap. Plugin jars are written to `/opt/minecraft/server/plugins` before `minecraft.service` starts.
+
+The repo currently installs AdvancedSensitiveWords and WorldEdit:
+
+```json
+{
+  "plugins": [
+    {
+      "name": "AdvancedSensitiveWords",
+      "source": "modrinth",
+      "project": "advancedsensitivewords",
+      "version": "Eh9FhiuS",
+      "loaders": ["paper", "bukkit", "spigot"]
+    },
+    {
+      "name": "WorldEdit",
+      "source": "modrinth",
+      "project": "worldedit",
+      "version": "yDUBafTJ",
+      "loaders": ["paper", "bukkit", "spigot"],
+      "gameVersions": ["26.1.2"]
+    }
+  ]
+}
+```
+
+For Modrinth plugins, set `source` to `modrinth`, set `project` to the project slug, and optionally set `version`, `loaders`, and `gameVersions` to pin the selected release. The bootstrap uses the file hash returned by Modrinth to verify the downloaded jar.
+
+Direct jar URLs are also supported:
+
+```json
+{
+  "name": "MyPlugin",
+  "url": "https://example.com/MyPlugin.jar",
+  "sha256": "..."
+}
+```
+
+Use `sha256` or `sha512` with direct URLs when possible. If you change `minecraftVersion`, review pinned plugin versions too.
 
 ## Admins / Ops
 

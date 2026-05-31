@@ -34,6 +34,33 @@
         "bypassesPlayerLimit": true
       }
     ],
+    "plugins": [
+      {
+        "name": "AdvancedSensitiveWords",
+        "source": "modrinth",
+        "project": "advancedsensitivewords",
+        "version": "Eh9FhiuS",
+        "loaders": [
+          "paper",
+          "bukkit",
+          "spigot"
+        ]
+      },
+      {
+        "name": "WorldEdit",
+        "source": "modrinth",
+        "project": "worldedit",
+        "version": "yDUBafTJ",
+        "loaders": [
+          "paper",
+          "bukkit",
+          "spigot"
+        ],
+        "gameVersions": [
+          "26.1.2"
+        ]
+      }
+    ],
     "@aws-cdk-containers/ecs-service-extensions:enableDefaultLogDriver": true,
     "@aws-cdk/aws-apigateway:authorizerChangeDeploymentLogicalId": true,
     "@aws-cdk/aws-apigateway:disableCloudWatchRole": true,

@@ -11,8 +11,9 @@ Current MVP behavior:
 * No SSH key or port 22 ingress.
 * Admin shell access through AWS Systems Manager Session Manager.
 * Optional Route53 `A` record backed by an Elastic IP when DNS config is set.
-* Defaults to a small test profile: `t3.small`, 20 GiB gp3 root volume, `-Xms512M`, `-Xmx1G`.
-* Set `isProd` to `true` for the larger production profile: `c7i.8xlarge`, 150 GiB gp3 root volume, `-Xms16G`, `-Xmx32G`.
+* Configurable plugin install list downloaded during instance bootstrap.
+* Defaults to a small Graviton test profile: `t4g.small`, 20 GiB gp3 root volume, `-Xms512M`, `-Xmx1G`.
+* Set `isProd` to `true` for the larger Graviton production profile: `c7g.8xlarge`, 150 GiB gp3 root volume, `-Xms16G`, `-Xmx32G`.
 
 Read [INSTRUCTIONS.md](./INSTRUCTIONS.md) before deploying.
 

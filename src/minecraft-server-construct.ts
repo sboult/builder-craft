@@ -7,6 +7,7 @@ import type {
   MinecraftDifficulty,
   MinecraftGameMode,
   MinecraftOperator,
+  MinecraftPlugin,
 } from "./user-data.ts";
 import { renderMinecraftUserData } from "./user-data.ts";
 
@@ -34,6 +35,7 @@ export interface MinecraftServerProps {
   readonly viewDistance?: number;
   readonly simulationDistance?: number;
   readonly ops?: readonly MinecraftOperator[];
+  readonly plugins?: readonly MinecraftPlugin[];
 
   readonly vpc?: ec2.IVpc;
   readonly hostedZoneId?: string;
@@ -112,6 +114,7 @@ export class MinecraftServer extends Construct {
         viewDistance: props.viewDistance,
         simulationDistance: props.simulationDistance,
         ops: props.ops,
+        plugins: props.plugins,
       }),
     );
 
@@ -239,6 +242,50 @@ function validateProps(props: MinecraftServerProps): void {
   for (const operator of props.ops ?? []) {
     requireNonEmpty("ops.name", operator.name);
     requireNonEmpty("ops.uuid", operator.uuid);
+  }
+
+  for (const plugin of props.plugins ?? []) {
+    validatePlugin(plugin);
+  }
+}
+
+function validatePlugin(plugin: MinecraftPlugin): void {
+  requireNonEmpty("plugins.name", plugin.name);
+
+  if (plugin.fileName !== undefined) {
+    requireNonEmpty("plugins.fileName", plugin.fileName);
+  }
+  if (plugin.sha256 !== undefined) {
+    requireNonEmpty("plugins.sha256", plugin.sha256);
+  }
+  if (plugin.sha512 !== undefined) {
+    requireNonEmpty("plugins.sha512", plugin.sha512);
+  }
+
+  if (plugin.url !== undefined && plugin.source !== undefined) {
+    throw new Error("Use either plugins.url or plugins.source, not both");
+  }
+  if (plugin.url !== undefined) {
+    requireNonEmpty("plugins.url", plugin.url);
+    return;
+  }
+
+  if (plugin.source !== "modrinth") {
+    throw new Error('plugins.source must be "modrinth" when url is not set');
+  }
+  if (plugin.project === undefined) {
+    throw new Error("plugins.project is required for Modrinth plugins");
+  }
+  requireNonEmpty("plugins.project", plugin.project);
+
+  if (plugin.version !== undefined) {
+    requireNonEmpty("plugins.version", plugin.version);
+  }
+  for (const loader of plugin.loaders ?? []) {
+    requireNonEmpty("plugins.loaders", loader);
+  }
+  for (const gameVersion of plugin.gameVersions ?? []) {
+    requireNonEmpty("plugins.gameVersions", gameVersion);
   }
 }
 

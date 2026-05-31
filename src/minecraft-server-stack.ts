@@ -2,7 +2,7 @@ import * as cdk from "aws-cdk-lib";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { Construct } from "constructs";
 import type { MinecraftServerProps } from "./minecraft-server-construct.ts";
-import type { MinecraftOperator } from "./user-data.ts";
+import type { MinecraftOperator, MinecraftPlugin } from "./user-data.ts";
 import { MinecraftServer } from "./minecraft-server-construct.ts";
 
 export interface MinecraftServerStackProps extends cdk.StackProps {
@@ -58,6 +58,7 @@ function configFromContext(scope: Construct): MinecraftServerProps {
     viewDistance: contextNumber(scope, "viewDistance", 6),
     simulationDistance: contextNumber(scope, "simulationDistance", 4),
     ops: contextOperators(scope, "ops"),
+    plugins: contextPlugins(scope, "plugins"),
     allowIpv6: contextOptionalBoolean(scope, "allowIpv6"),
   };
 }
@@ -195,8 +196,126 @@ function contextOperators(
   });
 }
 
+function contextPlugins(
+  scope: Construct,
+  key: string,
+): readonly MinecraftPlugin[] {
+  const rawValue = scope.node.tryGetContext(key);
+  if (rawValue === undefined || rawValue === null || rawValue === "") {
+    return [];
+  }
+
+  const parsed =
+    typeof rawValue === "string" ? JSON.parse(rawValue) : rawValue;
+  if (!Array.isArray(parsed)) {
+    throw new Error(`CDK context value "${key}" must be a JSON array`);
+  }
+
+  return parsed.map((entry, index) => {
+    if (!isRecord(entry)) {
+      throw new Error(`CDK context value "${key}[${index}]" must be an object`);
+    }
+
+    const name = requiredString(entry.name, `${key}[${index}].name`);
+    const url = optionalString(entry.url, `${key}[${index}].url`);
+    const source = optionalString(entry.source, `${key}[${index}].source`);
+    const project = optionalString(entry.project, `${key}[${index}].project`);
+    const version = optionalString(entry.version, `${key}[${index}].version`);
+    const fileName = optionalString(
+      entry.fileName,
+      `${key}[${index}].fileName`,
+    );
+    const sha256 = optionalString(entry.sha256, `${key}[${index}].sha256`);
+    const sha512 = optionalString(entry.sha512, `${key}[${index}].sha512`);
+    const loaders = optionalStringArray(
+      entry.loaders,
+      `${key}[${index}].loaders`,
+    );
+    const gameVersions = optionalStringArray(
+      entry.gameVersions,
+      `${key}[${index}].gameVersions`,
+    );
+
+    if (source !== undefined && source !== "modrinth") {
+      throw new Error(
+        `CDK context value "${key}[${index}].source" must be "modrinth"`,
+      );
+    }
+    if (url !== undefined && source !== undefined) {
+      throw new Error(
+        `CDK context value "${key}[${index}]" must use either url or source, not both`,
+      );
+    }
+    if (source === "modrinth" && project === undefined) {
+      throw new Error(
+        `CDK context value "${key}[${index}].project" is required for Modrinth plugins`,
+      );
+    }
+    if (url === undefined && source === undefined) {
+      throw new Error(
+        `CDK context value "${key}[${index}]" must include url or source`,
+      );
+    }
+
+    return {
+      name,
+      url,
+      source,
+      project,
+      version,
+      fileName,
+      sha256,
+      sha512,
+      loaders,
+      gameVersions,
+    };
+  });
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+function requiredString(value: unknown, fieldName: string): string {
+  if (typeof value !== "string" || value.trim().length === 0) {
+    throw new Error(`${fieldName} must be a non-empty string`);
+  }
+
+  return value;
+}
+
+function optionalString(value: unknown, fieldName: string): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (typeof value !== "string") {
+    throw new Error(`${fieldName} must be a string when provided`);
+  }
+  if (value.trim().length === 0) {
+    throw new Error(`${fieldName} must not be empty when provided`);
+  }
+
+  return value;
+}
+
+function optionalStringArray(
+  value: unknown,
+  fieldName: string,
+): readonly string[] | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (!Array.isArray(value)) {
+    throw new Error(`${fieldName} must be a string array when provided`);
+  }
+
+  return value.map((entry, index) => {
+    if (typeof entry !== "string" || entry.trim().length === 0) {
+      throw new Error(`${fieldName}[${index}] must be a non-empty string`);
+    }
+
+    return entry;
+  });
 }
 
 function optionalNumber(value: unknown, fieldName: string): number | undefined {
