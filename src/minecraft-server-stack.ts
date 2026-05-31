@@ -23,20 +23,24 @@ export class MinecraftServerStack extends cdk.Stack {
 
 function configFromContext(scope: Construct): MinecraftServerProps {
   const domainName = contextOptionalString(scope, "domainName");
-  const instanceTypeName = contextString(scope, "instanceType", "c7i.8xlarge");
+  const isProd = contextOptionalBoolean(scope, "isProd") ?? false;
+  const instanceTypeName = contextOptionalString(scope, "instanceType");
 
   return {
     domainName,
     hostedZoneDomainName: contextOptionalString(scope, "hostedZoneDomainName"),
     hostedZoneId: contextOptionalString(scope, "hostedZoneId"),
+    isProd,
     minecraftVersion: contextString(scope, "minecraftVersion", "1.21.4"),
     paperBuild: contextString(scope, "paperBuild", "232"),
     paperDownloadUrl: contextOptionalString(scope, "paperDownloadUrl"),
-    instanceType: new ec2.InstanceType(instanceTypeName),
-    volumeSizeGiB: contextNumber(scope, "volumeSizeGiB", 150),
+    instanceType: instanceTypeName
+      ? new ec2.InstanceType(instanceTypeName)
+      : undefined,
+    volumeSizeGiB: contextOptionalNumber(scope, "volumeSizeGiB"),
     serverName: contextOptionalString(scope, "serverName"),
-    memoryMin: contextString(scope, "memoryMin", "16G"),
-    memoryMax: contextString(scope, "memoryMax", "32G"),
+    memoryMin: contextOptionalString(scope, "memoryMin"),
+    memoryMax: contextOptionalString(scope, "memoryMax"),
     motd: contextString(scope, "motd", "BuilderCraft"),
     difficulty: contextOneOf(
       scope,
@@ -77,6 +81,24 @@ function contextOptionalString(scope: Construct, key: string): string | undefine
   }
 
   return value;
+}
+
+function contextOptionalNumber(
+  scope: Construct,
+  key: string,
+): number | undefined {
+  const value = scope.node.tryGetContext(key);
+  if (value === undefined || value === null || value === "") {
+    return undefined;
+  }
+
+  const parsed =
+    typeof value === "number" ? value : Number.parseInt(String(value), 10);
+  if (!Number.isFinite(parsed)) {
+    throw new Error(`CDK context value "${key}" must be a number`);
+  }
+
+  return parsed;
 }
 
 function contextNumber(

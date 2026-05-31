@@ -4,6 +4,8 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
+    "deploy": "cdk deploy -y",
+    "destroy": "cdk destroy -y",
     "cdk": "cdk"
   },
   "type": "module",

@@ -11,7 +11,8 @@ Current MVP behavior:
 * No SSH key or port 22 ingress.
 * Admin shell access through AWS Systems Manager Session Manager.
 * Optional Route53 `A` record backed by an Elastic IP when DNS config is set.
-* Defaults sized for roughly 100-150 players: `c7i.8xlarge`, 150 GiB gp3 root volume, `-Xms16G`, `-Xmx32G`, 150 max players, view distance 6, simulation distance 4.
+* Defaults to a small test profile: `t3.small`, 20 GiB gp3 root volume, `-Xms512M`, `-Xmx1G`.
+* Set `isProd` to `true` for the larger production profile: `c7i.8xlarge`, 150 GiB gp3 root volume, `-Xms16G`, `-Xmx32G`.
 
 Read [INSTRUCTIONS.md](./INSTRUCTIONS.md) before deploying.
 

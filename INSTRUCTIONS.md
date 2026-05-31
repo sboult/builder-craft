@@ -34,7 +34,7 @@ This project is set up so `npx cdk deploy` should work after local AWS prerequis
 
 6. Confirm EC2 capacity and quotas.
 
-   The MVP default instance is `c7i.8xlarge`. Make sure the selected region supports that instance type and that the account has enough EC2 quota.
+   The default test instance is `t3.small`. When `isProd` is `true`, the production default is `c7i.8xlarge`; make sure the selected region supports that instance type and that the account has enough EC2 quota.
 
 ## Local Config
 
@@ -42,12 +42,9 @@ Deployment defaults live in `cdk.json` under `context`:
 
 ```json
 {
+  "isProd": false,
   "minecraftVersion": "1.21.4",
   "paperBuild": "232",
-  "instanceType": "c7i.8xlarge",
-  "volumeSizeGiB": 150,
-  "memoryMin": "16G",
-  "memoryMax": "32G",
   "maxPlayers": 150,
   "viewDistance": 6,
   "simulationDistance": 4,
@@ -57,6 +54,8 @@ Deployment defaults live in `cdk.json` under `context`:
   "ops": []
 }
 ```
+
+Leave `instanceType`, `volumeSizeGiB`, `memoryMin`, and `memoryMax` unset to use the selected profile defaults. Set `isProd` to `true` for the production profile, or override those fields directly when you need a custom shape.
 
 The stack creates its own small public VPC by default. You do not need a default VPC in the account.
 

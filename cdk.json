@@ -17,12 +17,9 @@
     ]
   },
   "context": {
+    "isProd": false,
     "minecraftVersion": "26.1.2",
     "paperBuild": "66",
-    "instanceType": "c7i.8xlarge",
-    "volumeSizeGiB": 150,
-    "memoryMin": "16G",
-    "memoryMax": "32G",
     "maxPlayers": 150,
     "viewDistance": 6,
     "simulationDistance": 4,

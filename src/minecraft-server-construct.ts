@@ -14,6 +14,8 @@ export interface MinecraftServerProps {
   readonly domainName?: string;
   readonly hostedZoneDomainName?: string;
 
+  readonly isProd?: boolean;
+
   readonly minecraftVersion: string;
   readonly paperBuild: string;
   readonly paperDownloadUrl?: string;
@@ -48,6 +50,8 @@ export class MinecraftServer extends Construct {
     super(scope, id);
 
     validateProps(props);
+
+    const profile = deploymentProfile(props.isProd ?? false);
 
     const vpc =
       props.vpc ??
@@ -99,8 +103,8 @@ export class MinecraftServer extends Construct {
         paperBuild: props.paperBuild,
         paperDownloadUrl: props.paperDownloadUrl,
         serverName: props.serverName,
-        memoryMin: props.memoryMin,
-        memoryMax: props.memoryMax,
+        memoryMin: props.memoryMin ?? profile.memoryMin,
+        memoryMax: props.memoryMax ?? profile.memoryMax,
         motd: props.motd,
         difficulty: props.difficulty,
         gamemode: props.gamemode,
@@ -114,7 +118,8 @@ export class MinecraftServer extends Construct {
     this.instance = new ec2.Instance(this, "MinecraftInstance", {
       vpc,
       vpcSubnets: { subnetType: ec2.SubnetType.PUBLIC },
-      instanceType: props.instanceType ?? new ec2.InstanceType("c7i.8xlarge"),
+      instanceType:
+        props.instanceType ?? new ec2.InstanceType(profile.instanceType),
       machineImage: ec2.MachineImage.latestAmazonLinux2023(),
       role: this.role,
       securityGroup: this.securityGroup,
@@ -125,10 +130,13 @@ export class MinecraftServer extends Construct {
       blockDevices: [
         {
           deviceName: "/dev/xvda",
-          volume: ec2.BlockDeviceVolume.ebs(props.volumeSizeGiB ?? 150, {
-            encrypted: true,
-            volumeType: ec2.EbsDeviceVolumeType.GP3,
-          }),
+          volume: ec2.BlockDeviceVolume.ebs(
+            props.volumeSizeGiB ?? profile.volumeSizeGiB,
+            {
+              encrypted: true,
+              volumeType: ec2.EbsDeviceVolumeType.GP3,
+            },
+          ),
         },
       ],
     });
@@ -177,6 +185,27 @@ export class MinecraftServer extends Construct {
       value: `aws ssm start-session --target ${this.instance.instanceId}`,
     });
   }
+}
+
+function deploymentProfile(isProd: boolean): {
+  readonly instanceType: string;
+  readonly memoryMin: string;
+  readonly memoryMax: string;
+  readonly volumeSizeGiB: number;
+} {
+  return isProd
+    ? {
+        instanceType: "c7i.8xlarge",
+        memoryMin: "16G",
+        memoryMax: "32G",
+        volumeSizeGiB: 150,
+      }
+    : {
+        instanceType: "t3.small",
+        memoryMin: "512M",
+        memoryMax: "1G",
+        volumeSizeGiB: 20,
+      };
 }
 
 function validateProps(props: MinecraftServerProps): void {
