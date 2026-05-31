@@ -4,6 +4,7 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as route53 from "aws-cdk-lib/aws-route53";
 import { Construct } from "constructs";
 import type {
+  AdvancedSensitiveWordsConfig,
   MinecraftDifficulty,
   MinecraftGameMode,
   MinecraftOperator,
@@ -36,6 +37,7 @@ export interface MinecraftServerProps {
   readonly simulationDistance?: number;
   readonly ops?: readonly MinecraftOperator[];
   readonly plugins?: readonly MinecraftPlugin[];
+  readonly advancedSensitiveWords?: AdvancedSensitiveWordsConfig;
 
   readonly vpc?: ec2.IVpc;
   readonly hostedZoneId?: string;
@@ -115,6 +117,7 @@ export class MinecraftServer extends Construct {
         simulationDistance: props.simulationDistance,
         ops: props.ops,
         plugins: props.plugins,
+        advancedSensitiveWords: props.advancedSensitiveWords,
       }),
     );
 
@@ -246,6 +249,49 @@ function validateProps(props: MinecraftServerProps): void {
 
   for (const plugin of props.plugins ?? []) {
     validatePlugin(plugin);
+  }
+  if (props.advancedSensitiveWords !== undefined) {
+    validateAdvancedSensitiveWords(props.advancedSensitiveWords);
+  }
+}
+
+function validateAdvancedSensitiveWords(
+  config: AdvancedSensitiveWordsConfig,
+): void {
+  if (config.onlineWordsUrl !== undefined) {
+    requireNonEmpty(
+      "advancedSensitiveWords.onlineWordsUrl",
+      config.onlineWordsUrl,
+    );
+  }
+  if (config.onlineWordsEncoding !== undefined) {
+    requireNonEmpty(
+      "advancedSensitiveWords.onlineWordsEncoding",
+      config.onlineWordsEncoding,
+    );
+  }
+  if (
+    config.chatMethod !== undefined &&
+    config.chatMethod !== "replace" &&
+    config.chatMethod !== "cancel"
+  ) {
+    throw new Error(
+      'advancedSensitiveWords.chatMethod must be "replace" or "cancel"',
+    );
+  }
+
+  for (const blockedWord of config.blockedWords ?? []) {
+    validateWordListEntry("advancedSensitiveWords.blockedWords", blockedWord);
+  }
+  for (const allowedWord of config.allowedWords ?? []) {
+    validateWordListEntry("advancedSensitiveWords.allowedWords", allowedWord);
+  }
+}
+
+function validateWordListEntry(fieldName: string, value: string): void {
+  requireNonEmpty(fieldName, value);
+  if (value.includes("\n") || value.includes("\r")) {
+    throw new Error(`${fieldName} entries must be single-line strings`);
   }
 }
 

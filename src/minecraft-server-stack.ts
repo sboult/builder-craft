@@ -2,7 +2,12 @@ import * as cdk from "aws-cdk-lib";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import { Construct } from "constructs";
 import type { MinecraftServerProps } from "./minecraft-server-construct.ts";
-import type { MinecraftOperator, MinecraftPlugin } from "./user-data.ts";
+import type {
+  AdvancedSensitiveWordsConfig,
+  AdvancedSensitiveWordsChatMethod,
+  MinecraftOperator,
+  MinecraftPlugin,
+} from "./user-data.ts";
 import { MinecraftServer } from "./minecraft-server-construct.ts";
 
 export interface MinecraftServerStackProps extends cdk.StackProps {
@@ -59,6 +64,10 @@ function configFromContext(scope: Construct): MinecraftServerProps {
     simulationDistance: contextNumber(scope, "simulationDistance", 4),
     ops: contextOperators(scope, "ops"),
     plugins: contextPlugins(scope, "plugins"),
+    advancedSensitiveWords: contextAdvancedSensitiveWords(
+      scope,
+      "advancedSensitiveWords",
+    ),
     allowIpv6: contextOptionalBoolean(scope, "allowIpv6"),
   };
 }
@@ -270,6 +279,65 @@ function contextPlugins(
       gameVersions,
     };
   });
+}
+
+function contextAdvancedSensitiveWords(
+  scope: Construct,
+  key: string,
+): AdvancedSensitiveWordsConfig | undefined {
+  const rawValue = scope.node.tryGetContext(key);
+  if (rawValue === undefined || rawValue === null || rawValue === "") {
+    return undefined;
+  }
+  if (!isRecord(rawValue)) {
+    throw new Error(`CDK context value "${key}" must be an object`);
+  }
+
+  const chatMethod = optionalString(
+    rawValue.chatMethod,
+    `${key}.chatMethod`,
+  );
+  if (
+    chatMethod !== undefined &&
+    chatMethod !== "replace" &&
+    chatMethod !== "cancel"
+  ) {
+    throw new Error(
+      `CDK context value "${key}.chatMethod" must be replace or cancel`,
+    );
+  }
+
+  return {
+    enableDefaultWords: optionalBoolean(
+      rawValue.enableDefaultWords,
+      `${key}.enableDefaultWords`,
+    ),
+    enableOnlineWords: optionalBoolean(
+      rawValue.enableOnlineWords,
+      `${key}.enableOnlineWords`,
+    ),
+    onlineWordsUrl: optionalString(
+      rawValue.onlineWordsUrl,
+      `${key}.onlineWordsUrl`,
+    ),
+    onlineWordsEncoding: optionalString(
+      rawValue.onlineWordsEncoding,
+      `${key}.onlineWordsEncoding`,
+    ),
+    installOnlineWordsLocally: optionalBoolean(
+      rawValue.installOnlineWordsLocally,
+      `${key}.installOnlineWordsLocally`,
+    ),
+    chatMethod: chatMethod as AdvancedSensitiveWordsChatMethod | undefined,
+    blockedWords: optionalStringArray(
+      rawValue.blockedWords,
+      `${key}.blockedWords`,
+    ),
+    allowedWords: optionalStringArray(
+      rawValue.allowedWords,
+      `${key}.allowedWords`,
+    ),
+  };
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

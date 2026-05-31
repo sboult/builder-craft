@@ -61,6 +61,14 @@
         ]
       }
     ],
+    "advancedSensitiveWords": {
+      "enableDefaultWords": true,
+      "enableOnlineWords": false,
+      "onlineWordsUrl": "https://raw.githubusercontent.com/censor-text/profanity-list/refs/heads/main/list/en.txt",
+      "onlineWordsEncoding": "UTF-8",
+      "installOnlineWordsLocally": true,
+      "chatMethod": "replace"
+    },
     "@aws-cdk-containers/ecs-service-extensions:enableDefaultLogDriver": true,
     "@aws-cdk/aws-apigateway:authorizerChangeDeploymentLogicalId": true,
     "@aws-cdk/aws-apigateway:disableCloudWatchRole": true,

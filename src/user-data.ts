@@ -27,6 +27,19 @@ export interface MinecraftPlugin {
   readonly gameVersions?: readonly string[];
 }
 
+export type AdvancedSensitiveWordsChatMethod = "replace" | "cancel";
+
+export interface AdvancedSensitiveWordsConfig {
+  readonly enableDefaultWords?: boolean;
+  readonly enableOnlineWords?: boolean;
+  readonly onlineWordsUrl?: string;
+  readonly onlineWordsEncoding?: string;
+  readonly installOnlineWordsLocally?: boolean;
+  readonly chatMethod?: AdvancedSensitiveWordsChatMethod;
+  readonly blockedWords?: readonly string[];
+  readonly allowedWords?: readonly string[];
+}
+
 export interface MinecraftUserDataProps {
   readonly minecraftVersion: string;
   readonly paperBuild: string;
@@ -44,6 +57,7 @@ export interface MinecraftUserDataProps {
   readonly simulationDistance?: number;
   readonly ops?: readonly MinecraftOperator[];
   readonly plugins?: readonly MinecraftPlugin[];
+  readonly advancedSensitiveWords?: AdvancedSensitiveWordsConfig;
 }
 
 export function renderMinecraftUserData(props: MinecraftUserDataProps): string {
@@ -69,6 +83,9 @@ export function renderMinecraftUserData(props: MinecraftUserDataProps): string {
     2,
   );
   const pluginInstallScript = renderPluginInstallScript(props.plugins ?? []);
+  const advancedSensitiveWordsScript = renderAdvancedSensitiveWordsScript(
+    props.advancedSensitiveWords,
+  );
 
   return `#!/bin/bash
 set -euxo pipefail
@@ -114,6 +131,8 @@ if [ ! -s "$PAPER_JAR" ]; then
 fi
 
 ${pluginInstallScript}
+
+${advancedSensitiveWordsScript}
 
 log "Writing Minecraft configuration files"
 cat > "$SERVER_DIR/eula.txt" <<'EULA'
@@ -196,6 +215,94 @@ function renderServerProperties(props: {
 
 function shellQuote(value: string): string {
   return `'${value.replace(/'/g, "'\\''")}'`;
+}
+
+function renderAdvancedSensitiveWordsScript(
+  config: AdvancedSensitiveWordsConfig | undefined,
+): string {
+  if (config === undefined) {
+    return "";
+  }
+
+  const enableDefaultWords = config.enableDefaultWords ?? true;
+  const onlineWordsUrl =
+    config.onlineWordsUrl ??
+    "https://raw.githubusercontent.com/HaHaWTH/ASW-OnlineWordList/main/lists.txt";
+  const onlineWordsEncoding = config.onlineWordsEncoding ?? "UTF-8";
+  const installOnlineWordsLocally = config.installOnlineWordsLocally ?? true;
+  const enableOnlineWords =
+    config.enableOnlineWords ?? !installOnlineWordsLocally;
+  const chatMethod = config.chatMethod ?? "replace";
+
+  return `log "Configuring AdvancedSensitiveWords"
+PLUGINS_DIR="$SERVER_DIR/plugins"
+ASW_DIR="$PLUGINS_DIR/AdvancedSensitiveWords"
+ASW_EXTERNAL_DENY_DIR="$ASW_DIR/external/deny"
+ASW_EXTERNAL_ALLOW_DIR="$ASW_DIR/external/allow"
+ASW_ONLINE_WORDS_URL=${shellQuote(onlineWordsUrl)}
+ASW_INSTALL_ONLINE_WORDS_LOCALLY=${shellQuote(String(installOnlineWordsLocally))}
+install -d -o minecraft -g minecraft "$ASW_DIR" "$ASW_EXTERNAL_DENY_DIR" "$ASW_EXTERNAL_ALLOW_DIR"
+
+cat > "$ASW_DIR/config.yml" <<'ASW_CONFIG'
+Plugin:
+  language: en
+  enableDefaultWords: ${enableDefaultWords}
+  enableOnlineWords: ${enableOnlineWords}
+  onlineWordsUrl: ${yamlScalar(onlineWordsUrl)}
+  onlineWordsEncoding: ${yamlScalar(onlineWordsEncoding)}
+  cacheOnlineWords: true
+  logViolation: true
+  noticeOperator: true
+  replacement: "*"
+  punishment: []
+Chat:
+  method: ${yamlScalar(chatMethod)}
+  sendMessage: true
+  punish: false
+ASW_CONFIG
+
+if [ "$ASW_INSTALL_ONLINE_WORDS_LOCALLY" = "true" ]; then
+  log "Downloading AdvancedSensitiveWords online deny list into local external deny file"
+  ASW_ONLINE_WORDS_FILE="$ASW_EXTERNAL_DENY_DIR/buildercraft-online-deny.txt"
+  ASW_ONLINE_WORDS_TMP="$(mktemp /tmp/buildercraft-asw-words.XXXXXX)"
+  curl -fsSL -H "User-Agent: $BUILDERCRAFT_USER_AGENT" --max-time 30 -o "$ASW_ONLINE_WORDS_TMP" "$ASW_ONLINE_WORDS_URL"
+  tr -s '[:space:]' '\\n' < "$ASW_ONLINE_WORDS_TMP" | sed '/^$/d' > "$ASW_ONLINE_WORDS_FILE"
+  rm -f "$ASW_ONLINE_WORDS_TMP"
+
+  if [ ! -s "$ASW_ONLINE_WORDS_FILE" ]; then
+    log "AdvancedSensitiveWords online deny list was empty after normalization"
+    exit 1
+  fi
+fi
+
+${renderAdvancedSensitiveWordsListFile(
+  "ASW_EXTERNAL_DENY_DIR",
+  "buildercraft-deny.txt",
+  config.blockedWords ?? [],
+)}
+${renderAdvancedSensitiveWordsListFile(
+  "ASW_EXTERNAL_ALLOW_DIR",
+  "buildercraft-allow.txt",
+  config.allowedWords ?? [],
+)}
+`;
+}
+
+function renderAdvancedSensitiveWordsListFile(
+  directoryVariableName: string,
+  fileName: string,
+  words: readonly string[],
+): string {
+  if (words.length === 0) {
+    return "";
+  }
+
+  const wordsBase64 = Buffer.from(`${words.join("\n")}\n`, "utf8").toString(
+    "base64",
+  );
+
+  return `printf %s ${shellQuote(wordsBase64)} | base64 -d > "$${directoryVariableName}/${fileName}"
+`;
 }
 
 function renderPluginInstallScript(plugins: readonly MinecraftPlugin[]): string {
@@ -320,4 +427,8 @@ done < <(jq -c '.[]' "$PLUGIN_MANIFEST")
 
 function escapePropertyValue(value: string): string {
   return value.replace(/\\/g, "\\\\").replace(/\r?\n/g, "\\n");
+}
+
+function yamlScalar(value: string): string {
+  return JSON.stringify(value);
 }

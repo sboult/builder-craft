@@ -116,6 +116,27 @@ Direct jar URLs are also supported:
 
 Use `sha256` or `sha512` with direct URLs when possible. If you change `minecraftVersion`, review pinned plugin versions too.
 
+## Chat Moderation
+
+AdvancedSensitiveWords is configured during bootstrap with its bundled default dictionary and a remote deny list downloaded into the server's local external deny directory:
+
+```json
+{
+  "advancedSensitiveWords": {
+    "enableDefaultWords": true,
+    "enableOnlineWords": false,
+    "onlineWordsUrl": "https://raw.githubusercontent.com/censor-text/profanity-list/refs/heads/main/list/en.txt",
+    "onlineWordsEncoding": "UTF-8",
+    "installOnlineWordsLocally": true,
+    "chatMethod": "replace"
+  }
+}
+```
+
+`installOnlineWordsLocally` downloads `onlineWordsUrl` during EC2 bootstrap, normalizes whitespace-separated or newline-separated lists to one word per line, and writes `plugins/AdvancedSensitiveWords/external/deny/buildercraft-online-deny.txt`. `enableOnlineWords` is disabled because the plugin reads that local external deny file at startup instead of fetching the URL itself.
+
+`chatMethod` can be `replace` to censor matching words or `cancel` to block the full message. Add server-specific words through `blockedWords`; each entry is written to `plugins/AdvancedSensitiveWords/external/deny/buildercraft-deny.txt`. Add false positives through `allowedWords`, which writes `plugins/AdvancedSensitiveWords/external/allow/buildercraft-allow.txt`.
+
 ## Admins / Ops
 
 Set admins in `cdk.json` with Minecraft UUIDs:
