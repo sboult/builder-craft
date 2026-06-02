@@ -253,6 +253,12 @@ cat > "$SERVER_DIR/ops.json" <<'OPS'
     "name": "us_east_1",
     "level": 4,
     "bypassesPlayerLimit": true
+  },
+  {
+    "uuid": "c860980c-c9cf-4e7a-a318-6bca9af2adb4",
+    "name": "ruptwelve",
+    "level": 4,
+    "bypassesPlayerLimit": true
   }
 ]
 OPS
