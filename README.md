@@ -6,15 +6,14 @@ Current MVP behavior:
 
 * Fresh Paper world on first boot.
 * Public server, no whitelist.
-* Optional UUID-based admins through `ops` in `cdk.json`.
 * Dedicated public VPC created by the stack; no default VPC required.
 * No SSH key or port 22 ingress.
 * Admin shell access through AWS Systems Manager Session Manager.
 * Optional Route53 `A` record backed by an Elastic IP when DNS config is set.
-* Configurable plugin install list downloaded during instance bootstrap.
+* Static `src/user-data.sh` bootstrap that installs Paper, AdvancedSensitiveWords, and WorldEdit.
 * AdvancedSensitiveWords chat moderation with default words and a locally installed remote deny list.
-* Defaults to a small Graviton test profile: `t4g.small`, 20 GiB gp3 root volume, `-Xms512M`, `-Xmx1G`.
-* Set `isProd` to `true` for the larger Graviton production profile: `c7g.8xlarge`, 150 GiB gp3 root volume, `-Xms16G`, `-Xmx32G`.
+* Defaults to a small Graviton test profile: `t4g.small`, 20 GiB gp3 root volume.
+* Set `isProd` to `true` for the larger Graviton production profile: `c7g.8xlarge`, 150 GiB gp3 root volume.
 
 Read [INSTRUCTIONS.md](./INSTRUCTIONS.md) before deploying.
 

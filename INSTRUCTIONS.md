@@ -38,25 +38,15 @@ This project is set up so `npx cdk deploy` should work after local AWS prerequis
 
 ## Local Config
 
-Deployment defaults live in `cdk.json` under `context`:
+Infrastructure defaults live in `cdk.json` under `context`:
 
 ```json
 {
-  "isProd": false,
-  "minecraftVersion": "1.21.4",
-  "paperBuild": "232",
-  "maxPlayers": 150,
-  "viewDistance": 6,
-  "simulationDistance": 4,
-  "motd": "BuilderCraft",
-  "difficulty": "normal",
-  "gamemode": "survival",
-  "ops": [],
-  "plugins": []
+  "isProd": false
 }
 ```
 
-Leave `instanceType`, `volumeSizeGiB`, `memoryMin`, and `memoryMax` unset to use the selected profile defaults. Set `isProd` to `true` for the production profile, or override those fields directly when you need a custom shape.
+Leave `instanceType` and `volumeSizeGiB` unset to use the selected profile defaults. Set `isProd` to `true` for the production infrastructure profile, or override those fields directly when you need a custom shape.
 
 The stack creates its own small public VPC by default. You do not need a default VPC in the account.
 
@@ -66,95 +56,23 @@ Optional override:
 {
   "domainName": "buildercraft.com",
   "hostedZoneDomainName": "buildercraft.com",
-  "hostedZoneId": "Z0123456789EXAMPLE",
-  "paperDownloadUrl": "https://fill-data.papermc.io/.../paper-1.21.4-232.jar"
+  "hostedZoneId": "Z0123456789EXAMPLE"
 }
 ```
 
 For DNS, set `domainName` and exactly one of `hostedZoneDomainName` or `hostedZoneId`.
-Use `paperDownloadUrl` when you want to bypass the PaperMC build lookup and pin the exact jar URL.
 
-## Plugins
+## Minecraft Bootstrap
 
-Set `plugins` in `cdk.json` to install Paper plugins during EC2 bootstrap. Plugin jars are written to `/opt/minecraft/server/plugins` before `minecraft.service` starts.
+Minecraft setup lives in `src/user-data.sh`, not CDK context. Edit that shell script to change the Paper version/build, JVM memory, plugin manifest, AdvancedSensitiveWords config, word-list URL, server properties, or `ops.json`.
 
-The repo currently installs AdvancedSensitiveWords and WorldEdit:
+The bootstrap currently installs AdvancedSensitiveWords and WorldEdit from Modrinth. Plugin jars are written to `/opt/minecraft/server/plugins` before `minecraft.service` starts.
 
-```json
-{
-  "plugins": [
-    {
-      "name": "AdvancedSensitiveWords",
-      "source": "modrinth",
-      "project": "advancedsensitivewords",
-      "version": "Eh9FhiuS",
-      "loaders": ["paper", "bukkit", "spigot"]
-    },
-    {
-      "name": "WorldEdit",
-      "source": "modrinth",
-      "project": "worldedit",
-      "version": "yDUBafTJ",
-      "loaders": ["paper", "bukkit", "spigot"],
-      "gameVersions": ["26.1.2"]
-    }
-  ]
-}
+AdvancedSensitiveWords is configured with bundled default words enabled and plugin online words disabled. The script downloads the configured remote deny list, normalizes whitespace-separated or newline-separated entries to one word per line, and writes:
+
+```txt
+/opt/minecraft/server/plugins/AdvancedSensitiveWords/external/deny/buildercraft-online-deny.txt
 ```
-
-For Modrinth plugins, set `source` to `modrinth`, set `project` to the project slug, and optionally set `version`, `loaders`, and `gameVersions` to pin the selected release. The bootstrap uses the file hash returned by Modrinth to verify the downloaded jar.
-
-Direct jar URLs are also supported:
-
-```json
-{
-  "name": "MyPlugin",
-  "url": "https://example.com/MyPlugin.jar",
-  "sha256": "..."
-}
-```
-
-Use `sha256` or `sha512` with direct URLs when possible. If you change `minecraftVersion`, review pinned plugin versions too.
-
-## Chat Moderation
-
-AdvancedSensitiveWords is configured during bootstrap with its bundled default dictionary and a remote deny list downloaded into the server's local external deny directory:
-
-```json
-{
-  "advancedSensitiveWords": {
-    "enableDefaultWords": true,
-    "enableOnlineWords": false,
-    "onlineWordsUrl": "https://raw.githubusercontent.com/censor-text/profanity-list/refs/heads/main/list/en.txt",
-    "onlineWordsEncoding": "UTF-8",
-    "installOnlineWordsLocally": true,
-    "chatMethod": "replace"
-  }
-}
-```
-
-`installOnlineWordsLocally` downloads `onlineWordsUrl` during EC2 bootstrap, normalizes whitespace-separated or newline-separated lists to one word per line, and writes `plugins/AdvancedSensitiveWords/external/deny/buildercraft-online-deny.txt`. `enableOnlineWords` is disabled because the plugin reads that local external deny file at startup instead of fetching the URL itself.
-
-`chatMethod` can be `replace` to censor matching words or `cancel` to block the full message. Add server-specific words through `blockedWords`; each entry is written to `plugins/AdvancedSensitiveWords/external/deny/buildercraft-deny.txt`. Add false positives through `allowedWords`, which writes `plugins/AdvancedSensitiveWords/external/allow/buildercraft-allow.txt`.
-
-## Admins / Ops
-
-Set admins in `cdk.json` with Minecraft UUIDs:
-
-```json
-{
-  "ops": [
-    {
-      "name": "us_east_1",
-      "uuid": "278b452e-27fe-4ae8-baf0-b3381bb73e99",
-      "level": 4,
-      "bypassesPlayerLimit": true
-    }
-  ]
-}
-```
-
-This writes `/opt/minecraft/server/ops.json` during bootstrap. It does not enable a whitelist; the server remains public.
 
 ## Deploy
 
